@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  medrax:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bowang-lab--medrax_image:latest
+    container_name: medrax-container
+    
+    # Port mapping: host:container
+    # Access at http://localhost:11180
+    ports:
+      - "11180:8585"
+    
+    # Volume mounts
+    volumes:
+      # Temporary files (read-write)
+      - ./temp:/medrax/temp:rw
+      # Application logs (read-write)
+      - ./logs:/medrax/logs:rw
+      # Model weights (read-write for downloads, can change to :ro after first run)
+      # Adjust path to your model weights directory
+      - ${MODEL_WEIGHTS_PATH:-./model-weights}:/model-weights:rw
+      # Model cache (HuggingFace, TorchXRayVision, etc.)
+      # Pre-download models here to avoid re-downloading on restart
+      - ${MODEL_CACHE_DIR:-./model-cache}:/cache:rw
+      # Optional: Mount assets if needed
+      # - ./assets:/medrax/assets:ro
+    
+    # Environment variables
+    # You can use .env file or set them here
+    environment:
+      # Required
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # Optional - API Configuration
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      
+      # Optional - Model Configuration
+      - MODEL=${MODEL:-gpt-4o}
+      - DEVICE=${DEVICE:-cuda}
+      - TEMPERATURE=${TEMPERATURE:-0.7}
+      - TOP_P=${TOP_P:-0.95}
+      
+      # Optional - Directories
+      - TEMP_DIR=${TEMP_DIR:-temp}
+      
+      # Cache directories (for pre-downloaded models)
+      - HF_HOME=/cache/huggingface
+      - TRANSFORMERS_CACHE=/cache/huggingface
+      - TORCH_HOME=/cache/.cache/torch
+      - TORCHXRAYVISION_CACHE=/cache/torchxrayvision
+      
+      # Python configuration
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    
+    # Optional: Load environment from .env file
+    env_file:
+      - .env
+    
+    # Shared memory size (increase if needed for large models)
+    shm_size: 2gb
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # GPU support (requires nvidia-docker)
+    # Comment out if running on CPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1  # Number of GPUs to use
+              capabilities: [gpu]
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8585/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Network settings
+    networks:
+      - medrax-network
+    
+    # Resource limits (optional, adjust based on your system)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 16G
+    #     reservations:
+    #       cpus: '2'
+    #       memory: 8G
+
+networks:
+  medrax-network:
+    driver: bridge
+
+# Optional: Define volumes explicitly for better management
+# volumes:
+#   temp-data:
+#   log-data:
+
