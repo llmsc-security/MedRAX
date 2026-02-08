@@ -116,13 +116,18 @@ if __name__ == "__main__":
     if base_url := os.getenv("OPENAI_BASE_URL"):
         openai_kwargs["base_url"] = base_url
 
+    # Get device from environment variable, default to "cuda" if not set
+    device = os.getenv("DEVICE", "cuda")
+    model = os.getenv("MODEL", "gpt-4o")
+    temp_dir = os.getenv("TEMP_DIR", "temp")
+
     agent, tools_dict = initialize_agent(
         "medrax/docs/system_prompts.txt",
         tools_to_use=selected_tools,
         model_dir="/model-weights",  # Change this to the path of the model weights
-        temp_dir="temp",  # Change this to the path of the temporary directory
-        device="cuda",  # Change this to the device you want to use
-        model="gpt-4o",  # Change this to the model you want to use, e.g. gpt-4o-mini
+        temp_dir=temp_dir,  # Change this to the path of the temporary directory
+        device=device,  # Change this to the device you want to use
+        model=model,  # Change this to the model you want to use, e.g. gpt-4o-mini
         temperature=0.7,
         top_p=0.95,
         openai_kwargs=openai_kwargs
